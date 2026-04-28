@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>BizBot — AI Business Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161922;
+    --surface2: #1e2330;
+    --border: #2a2f3d;
+    --accent: #6ee7b7;
+    --accent2: #38bdf8;
+    --accent3: #f472b6;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --bot-bubble: #1e2b3a;
+    --user-bubble: #163028;
+    --radius: 18px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .avatar {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    box-shadow: 0 0 16px rgba(110,231,183,0.25);
+  }
+
+  .header-info h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .status {
+    font-size: 12px;
+    color: var(--accent);
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  .status::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .dept-badge {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* ── Chat area ── */
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+  }
+
+  #chat::-webkit-scrollbar { width: 4px; }
+  #chat::-webkit-scrollbar-track { background: transparent; }
+  #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ── Messages ── */
+  .msg-row {
+    display: flex;
+    gap: 10px;
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-row.user { flex-direction: row-reverse; }
+
+  .msg-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    margin-top: 2px;
+  }
+
+  .msg-row.bot .msg-avatar {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+  }
+
+  .msg-row.user .msg-avatar {
+    background: linear-gradient(135deg, var(--accent3), #a78bfa);
+  }
+
+  .bubble {
+    max-width: min(72%, 380px);
+    padding: 11px 15px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .msg-row.bot .bubble {
+    background: var(--bot-bubble);
+    border: 1px solid var(--border);
+    border-top-left-radius: 4px;
+    color: var(--text);
+  }
+
+  .msg-row.user .bubble {
+    background: var(--user-bubble);
+    border: 1px solid #1e3d2e;
+    border-top-right-radius: 4px;
+    color: var(--text);
+  }
+
+  .bubble .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: var(--surface2);
+    color: var(--accent);
+    border: 1px solid rgba(110,231,183,0.2);
+    margin-bottom: 6px;
+  }
+
+  .timestamp {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+    padding: 0 4px;
+  }
+
+  .msg-row.user .timestamp { text-align: right; }
+
+  /* ── Quick replies ── */
+  .quick-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 8px;
+  }
+
+  .quick-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--accent2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .quick-btn:hover, .quick-btn:active {
+    background: rgba(56,189,248,0.1);
+    border-color: var(--accent2);
+    transform: translateY(-1px);
+  }
+
+  /* ── Typing indicator ── */
+  .typing-row { display: flex; gap: 10px; align-items: center; }
+
+  .typing-bubble {
+    background: var(--bot-bubble);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    border-top-left-radius: 4px;
+    padding: 12px 16px;
+    display: flex; gap: 5px; align-items: center;
+  }
+
+  .typing-bubble span {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: bounce 1.2s infinite;
+  }
+
+  .typing-bubble span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-bubble span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); opacity: 0.4; }
+    50%       { transform: translateY(-5px); opacity: 1; }
+  }
+
+  /* ── Department picker (onboarding) ── */
+  #onboarding {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    gap: 20px;
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .onboard-logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .onboard-sub {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    max-width: 260px;
+  }
+
+  .name-input-wrap {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .name-input-wrap label {
+    font-size: 12px;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 6px;
+    font-family: 'Syne', sans-serif;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .name-input-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border 0.2s;
+  }
+
+  .name-input-wrap input:focus {
+    border-color: var(--accent);
+  }
+
+  .dept-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .dept-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; flex-direction: column; gap: 5px;
+    text-align: left;
+  }
+
+  .dept-card:hover, .dept-card.selected {
+    border-color: var(--accent);
+    background: rgba(110,231,183,0.06);
+  }
+
+  .dept-card.selected { box-shadow: 0 0 0 2px rgba(110,231,183,0.3); }
+
+  .dept-icon { font-size: 20px; }
+
+  .dept-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: capitalize;
+    color: var(--text);
+  }
+
+  .start-btn {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #0d0f14;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 40px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 320px;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+
+  .start-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .start-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ── Input bar ── */
+  #input-bar {
+    padding: 12px 14px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+
+  #input-bar textarea {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+    max-height: 120px;
+    min-height: 44px;
+    line-height: 1.5;
+    transition: border 0.2s;
+  }
+
+  #input-bar textarea:focus { border-color: var(--accent); }
+  #input-bar textarea::placeholder { color: var(--muted); }
+
+  #send-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.15s, transform 0.15s;
+    font-size: 18px;
+  }
+
+  #send-btn:hover { transform: scale(1.07); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ── Products card ── */
+  .product-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 4px 0;
+  }
+
+  .product-card h4 {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent2);
+    margin-bottom: 4px;
+  }
+
+  .product-card .price {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+  }
+
+  .product-card .price span {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .product-card ul {
+    margin-top: 6px;
+    padding-left: 16px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  /* ── Feedback modal ── */
+  #feedback-modal {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  #feedback-modal.open { display: flex; }
+
+  .modal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 360px;
+    animation: slideUp 0.25s ease;
+  }
+
+  .modal-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .stars { display: flex; gap: 8px; margin-bottom: 16px; }
+
+  .star {
+    font-size: 28px;
+    cursor: pointer;
+    transition: transform 0.1s;
+    filter: grayscale(1);
+    opacity: 0.4;
+  }
+
+  .star.active { filter: none; opacity: 1; transform: scale(1.15); }
+
+  .modal-card textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    resize: none;
+    height: 80px;
+    outline: none;
+    margin-bottom: 14px;
+  }
+
+  .modal-btns { display: flex; gap: 10px; }
+
+  .modal-btns button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-cancel { background: var(--surface2); color: var(--muted); }
+  .btn-submit {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #0d0f14;
+  }
+
+  #chat-view { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  #chat-view.active { display: flex; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="avatar">🤖</div>
+  <div class="header-info">
+    <h1>BizBot</h1>
+    <div class="status">Online · v1.0</div>
+  </div>
+  <div class="dept-badge" id="dept-label">—</div>
+</header>
+
+<!-- Onboarding screen -->
+<div id="onboarding">
+  <div class="onboard-logo">BizBot</div>
+  <div class="onboard-sub">Your AI business assistant. Choose a department to get started.</div>
+
+  <div class="name-input-wrap">
+    <label>Your name</label>
+    <input type="text" id="user-name" placeholder="e.g. Alex" maxlength="30"/>
+  </div>
+
+  <div style="width:100%;max-width:320px">
+    <div style="font-size:12px;color:var(--muted);font-family:'Syne',sans-serif;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:10px;">Department</div>
+    <div class="dept-grid" id="dept-grid"></div>
+  </div>
+
+  <button class="start-btn" id="start-btn" disabled onclick="startChat()">Start Chatting →</button>
+</div>
+
+<!-- Chat view -->
+<div id="chat-view">
+  <div id="chat"></div>
+  <div id="input-bar">
+    <textarea id="msg-input" placeholder="Type a message…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button id="send-btn" onclick="sendMessage()" title="Send">➤</button>
+  </div>
+</div>
+
+<!-- Feedback modal -->
+<div id="feedback-modal">
+  <div class="modal-card">
+    <h3>⭐ Rate your experience</h3>
+    <div class="stars" id="stars">
+      <span class="star" data-v="1" onclick="setRating(1)">⭐</span>
+      <span class="star" data-v="2" onclick="setRating(2)">⭐</span>
+      <span class="star" data-v="3" onclick="setRating(3)">⭐</span>
+      <span class="star" data-v="4" onclick="setRating(4)">⭐</span>
+      <span class="star" data-v="5" onclick="setRating(5)">⭐</span>
+    </div>
+    <textarea id="fb-comment" placeholder="Any comments? (optional)"></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeFeedback()">Skip</button>
+      <button class="btn-submit" onclick="submitFeedback()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────
+const DEPT_ICONS = { sales:'📦', support:'🔧', billing:'💳', hr:'🏢', it:'💻', general:'🌐' };
+
+const KNOWLEDGE_BASE = {
+  sales: {
+    keywords: ["buy","purchase","price","discount","offer","product","order","cost","deal"],
+    responses: [
+      "Our sales team can help you with pricing and offers! 📦\nWould you like to know about our current deals?",
+      "We have great products at competitive prices! 💰\nType 'products' to see our catalog.",
+      "Looking to make a purchase? I can connect you with a sales rep. 🤝"
+    ]
+  },
+  support: {
+    keywords: ["help","problem","issue","not working","error","broken","fix","trouble","bug"],
+    responses: [
+      "I'm sorry to hear you're having trouble! 🔧\nCan you describe the issue in more detail?",
+      "Our support team is here to help! 💡\nPlease provide your ticket number if you have one.",
+      "Let me help you troubleshoot. 🛠️\nHave you tried restarting the application?"
+    ]
+  },
+  billing: {
+    keywords: ["invoice","payment","bill","charge","refund","receipt","subscription","renew"],
+    responses: [
+      "For billing inquiries, please have your invoice number ready. 🧾",
+      "Our billing team handles all payment issues promptly! 💳",
+      "I can help with billing questions. Are you looking for a refund or payment update? 💬"
+    ]
+  },
+  hr: {
+    keywords: ["job","career","apply","vacancy","hire","employee","leave","salary","work"],
+    responses: [
+      "Interested in joining our team? 🏢\nCheck our careers page for open positions!",
+      "For HR matters, please contact hr@company.com 📧",
+      "We value our employees! For leave requests, use the HR portal. 🌟"
+    ]
+  },
+  it: {
+    keywords: ["password","login","access","vpn","software","install","computer","network","system"],
+    responses: [
+      "For IT support, please log a ticket at helpdesk.company.com 🖥️",
+      "IT issues? I got you! 💻\nIs this about hardware, software, or network?",
+      "Password reset? Visit the self-service portal or call IT ext. 1234 🔑"
+    ]
+  },
+  general: {
+    keywords: ["hours","location","contact","address","about","info","open","close","website"],
+    responses: [
+      "We're open Monday–Friday, 9 AM – 6 PM. 🕘\nHow can I assist you today?",
+      "You can reach us at info@company.com or +1-800-BIZ-HELP 📞",
+      "Visit our website at www.company.com for more information! 🌐"
+    ]
+  }
+};
+
+const PRODUCTS = [
+  { name: "Basic Plan",    price: 9.99,  features: ["5 Users", "10 GB Storage", "Email Support"] },
+  { name: "Pro Plan",      price: 29.99, features: ["25 Users", "100 GB Storage", "Priority Support", "Analytics"] },
+  { name: "Enterprise",    price: 99.99, features: ["Unlimited Users", "1 TB Storage", "24/7 Support", "Custom Integrations"] }
+];
+
+const GREETINGS = ["hi","hello","hey","howdy","greetings","good morning","good afternoon"];
+const FAREWELLS = ["bye","goodbye","exit","quit","see you","later","farewell"];
+
+// ── State ─────────────────────────────────────
+let userName = "Guest";
+let userDept = "general";
+let msgCount = 0;
+let responseCounter = 0;
+let rating = 0;
+let sessionStart = null;
+
+// ── Onboarding ────────────────────────────────
+const grid = document.getElementById('dept-grid');
+Object.keys(DEPT_ICONS).forEach(dept => {
+  const card = document.createElement('div');
+  card.className = 'dept-card';
+  card.innerHTML = `<div class="dept-icon">${DEPT_ICONS[dept]}</div><div class="dept-name">${dept}</div>`;
+  card.onclick = () => {
+    document.querySelectorAll('.dept-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    userDept = dept;
+    checkReady();
+  };
+  grid.appendChild(card);
+});
+
+document.getElementById('user-name').addEventListener('input', checkReady);
+
+function checkReady() {
+  const nameOk = document.getElementById('user-name').value.trim().length > 0;
+  const deptOk = userDept !== 'general' || document.querySelector('.dept-card.selected');
+  document.getElementById('start-btn').disabled = !(nameOk && document.querySelector('.dept-card.selected'));
+}
+
+function startChat() {
+  userName = document.getElementById('user-name').value.trim() || 'Guest';
+  document.getElementById('dept-label').textContent = `${DEPT_ICONS[userDept]} ${userDept.toUpperCase()}`;
+  document.getElementById('onboarding').style.display = 'none';
+  document.getElementById('chat-view').classList.add('active');
+  sessionStart = new Date();
+
+  const greeting = `Hello ${userName}! 👋 Welcome to BizBot!\nI can help with: ${Object.keys(DEPT_ICONS).join(', ')}\nWhat can I do for you today?`;
+  appendBot(greeting, ['products', 'calculate', 'history', 'feedback']);
+  document.getElementById('msg-input').focus();
+}
+
+// ── Fibonacci ─────────────────────────────────
+function fib(n) {
+  if (n <= 0) return 0;
+  if (n === 1) return 1;
+  let a = 0, b = 1;
+  for (let i = 2; i <= n; i++) [a, b] = [b, a + b];
+  return b;
+}
+
+// ── GCD ───────────────────────────────────────
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+// ── Intent detection ──────────────────────────
+function detectIntent(msg) {
+  const lower = msg.toLowerCase();
+  let best = 'general', bestScore = 0;
+  for (const [dept, data] of Object.entries(KNOWLEDGE_BASE)) {
+    let score = data.keywords.filter(k => lower.includes(k)).length;
+    if (score > bestScore) { bestScore = score; best = dept; }
+  }
+  return best;
+}
+
+// ── Generate response ─────────────────────────
+function generateResponse(msg) {
+  const lower = msg.trim().toLowerCase();
+
+  if (GREETINGS.some(g => lower.includes(g)))
+    return { text: `Hello ${userName}! 👋 Welcome back to BizBot!\nWhat can I help you with today?`, hints: ['products','calculate','history','feedback'] };
+
+  if (FAREWELLS.some(f => lower.includes(f)))
+    return { text: null };
+
+  if (lower.includes('products') || lower.includes('plans') || lower.includes('pricing'))
+    return { text: null, products: true };
+
+  if (lower.includes('calculate') || lower.includes('split') || lower.includes('discount'))
+    return { text: calcResponse() };
+
+  if (lower.includes('history') || lower.includes('topics'))
+    return { text: sessionInfo() };
+
+  if (lower.includes('feedback') || lower.includes('rate'))
+    return { text: null, feedback: true };
+
+  const dept = detectIntent(msg);
+  const responses = KNOWLEDGE_BASE[dept].responses;
+  const idx = fib(responseCounter % 6) % responses.length;
+  responseCounter++;
+  return { text: `[${dept.toUpperCase()}] ${responses[idx]}`, dept };
+}
+
+function calcResponse() {
+  const plans = [...PRODUCTS].sort((a, b) => a.price - b.price);
+  let out = `🧮 TEAM DISCOUNT CALCULATOR\n${'─'.repeat(32)}\nPro Plan ($29.99) splits:\n`;
+  [2, 3, 5, 10].forEach(u => {
+    const cents = Math.round(29.99 * 100);
+    const g = gcd(cents, u);
+    out += `  👥 ${u} users → $${(cents / g / 100 * g / u).toFixed(2)}/user\n`;
+  });
+  const annual = 29.99 * 12;
+  const disc = annual * 0.15;
+  out += `\n📊 Annual Pro: $${annual.toFixed(2)}\n   15% off   : -$${disc.toFixed(2)}\n   You pay   : $${(annual - disc).toFixed(2)}`;
+  return out;
+}
+
+function sessionInfo() {
+  const elapsed = sessionStart ? Math.floor((new Date() - sessionStart) / 1000) : 0;
+  const mins = Math.floor(elapsed / 60), secs = elapsed % 60;
+  return `📊 SESSION INFO\n${'─'.repeat(28)}\n  Name      : ${userName}\n  Dept      : ${userDept}\n  Messages  : ${msgCount}\n  Duration  : ${mins}m ${secs}s`;
+}
+
+// ── Messaging UI ──────────────────────────────
+function now() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function appendUser(text) {
+  const chat = document.getElementById('chat');
+  const row = document.createElement('div');
+  row.className = 'msg-row user';
+  row.innerHTML = `
+    <div>
+      <div class="bubble">${escHtml(text)}</div>
+      <div class="timestamp">${now()}</div>
+    </div>
+    <div class="msg-avatar">👤</div>`;
+  chat.appendChild(row);
+  scrollBottom();
+}
+
+function appendBot(text, hints = [], dept = null, isProducts = false) {
+  const chat = document.getElementById('chat');
+  const row = document.createElement('div');
+  row.className = 'msg-row bot';
+
+  let inner = '';
+  if (dept) inner += `<div class="tag">${dept.toUpperCase()}</div>\n`;
+
+  if (isProducts) {
+    inner += `<div style="margin-bottom:6px;font-weight:500;">📦 Our Plans</div>`;
+    const sorted = [...PRODUCTS].sort((a, b) => a.price - b.price);
+    sorted.forEach(p => {
+      const annual = p.price * 12;
+      const save = annual * 0.1;
+      inner += `<div class="product-card">
+        <h4>${p.name}</h4>
+        <div class="price">$${p.price.toFixed(2)}<span>/mo · $${annual.toFixed(2)}/yr (save $${save.toFixed(2)})</span></div>
+        <ul>${p.features.map(f => `<li>${f}</li>`).join('')}</ul>
+      </div>`;
+    });
+  } else {
+    inner += escHtml(text).replace(/\n/g, '<br>');
+  }
+
+  if (hints.length) {
+    inner += `<div class="quick-wrap">${hints.map(h => `<button class="quick-btn" onclick="quickSend('${h}')">${h}</button>`).join('')}</div>`;
+  }
+
+  row.innerHTML = `
+    <div class="msg-avatar">🤖</div>
+    <div>
+      <div class="bubble">${inner}</div>
+      <div class="timestamp">${now()}</div>
+    </div>`;
+  chat.appendChild(row);
+  scrollBottom();
+}
+
+function showTyping() {
+  const chat = document.getElementById('chat');
+  const row = document.createElement('div');
+  row.className = 'typing-row';
+  row.id = 'typing';
+  row.innerHTML = `
+    <div class="msg-avatar" style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:14px;">🤖</div>
+    <div class="typing-bubble"><span></span><span></span><span></span></div>`;
+  chat.appendChild(row);
+  scrollBottom();
+}
+
+function hideTyping() {
+  const el = document.getElementById('typing');
+  if (el) el.remove();
+}
+
+function scrollBottom() {
+  const chat = document.getElementById('chat');
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Send ──────────────────────────────────────
+function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  appendUser(text);
+  msgCount++;
+
+  showTyping();
+  document.getElementById('send-btn').disabled = true;
+
+  setTimeout(() => {
+    hideTyping();
+    document.getElementById('send-btn').disabled = false;
+
+    const res = generateResponse(text);
+
+    if (res.text === null && !res.products && !res.feedback) {
+      // Farewell
+      const elapsed = sessionStart ? Math.floor((new Date() - sessionStart) / 1000) : 0;
+      const mins = Math.floor(elapsed / 60), secs = elapsed % 60;
+      appendBot(`👋 Thanks for chatting, ${userName}!\nSession: ${mins}m ${secs}s · Messages: ${msgCount}`);
+      setTimeout(() => openFeedback(), 1000);
+    } else if (res.feedback) {
+      openFeedback();
+    } else if (res.products) {
+      appendBot('', [], null, true);
+    } else {
+      appendBot(res.text, [], res.dept || null);
+    }
+  }, 600 + Math.random() * 500);
+}
+
+function quickSend(text) {
+  document.getElementById('msg-input').value = text;
+  sendMessage();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ── Feedback ──────────────────────────────────
+function openFeedback() {
+  document.getElementById('feedback-modal').classList.add('open');
+}
+
+function closeFeedback() {
+  document.getElementById('feedback-modal').classList.remove('open');
+  appendBot(`✅ No problem! Come back anytime, ${userName}. 👋`);
+}
+
+function setRating(val) {
+  rating = val;
+  document.querySelectorAll('.star').forEach(s => {
+    s.classList.toggle('active', parseInt(s.dataset.v) <= val);
+  });
+}
+
+function submitFeedback() {
+  const comment = document.getElementById('fb-comment').value.trim();
+  document.getElementById('feedback-modal').classList.remove('open');
+  const stars = '⭐'.repeat(rating || 3);
+  appendBot(`✅ Thanks for your feedback, ${userName}!\nRating: ${stars}\n${comment ? `Comment: "${comment}"` : ''}\n\nHave a great day! 🌟`);
+}
+</script>
+</body>
+</html>
